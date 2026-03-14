@@ -6,9 +6,9 @@ from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.vtkRenderingCore import vtkRenderer
 
 from pymeshup import STEP
-from pymeshup.gui.forms.step_mesher import Ui_MainWindow
-from pymeshup.gui.helpers.vtkBlenderLikeInteractionStyle import BlenderStyle
-from pymeshup.gui.main import CreateVTKActor, CreateVTKLineActor
+from pymeshup_gui.gui.forms.step_mesher import Ui_MainWindow
+from pymeshup_gui.gui.helpers.vtkBlenderLikeInteractionStyle import BlenderStyle
+from pymeshup_gui.gui.main import CreateVTKActor, CreateVTKLineActor
 
 
 class StepMesherGui:
@@ -125,7 +125,6 @@ class StepMesherGui:
         mesh = self.step_file.to_volume(
             linear_tolerance=lintol,
             angular_tolerance=angtol,
-            filename = filename
         )
 
         self.ui.lbFeedback.setText(
