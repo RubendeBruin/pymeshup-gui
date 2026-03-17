@@ -30,6 +30,7 @@ dependencies = [
     "capytaine>=2.2",
     "mafredo",
     "netcdf4>=1.7.2",
+    "pyinstaller"
 ]
 urls = { "Documentation" = "https://open-ocean.org/" }
 
