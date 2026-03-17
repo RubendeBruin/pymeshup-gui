@@ -29,9 +29,9 @@ import numpy as np
 from vedo import camera_to_dict, camera_from_dict
 from vtkmodules.vtkFiltersSources import vtkLineSource
 
-from pymeshup.gui.forms.main_form import Ui_MainWindow
+from pymeshup_gui.gui.forms.main_form import Ui_MainWindow
 
-from pymeshup.helpers.darkmode import is_dark_mode
+from pymeshup_gui.helpers.darkmode import is_dark_mode
 
 
 from vtkmodules.vtkCommonCore import vtkPoints
@@ -48,11 +48,11 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 from matplotlib.figure import Figure
 from matplotlib import colormaps as cm
 
-from pymeshup.gui.helpers.vtkBlenderLikeInteractionStyle import (
+from pymeshup_gui.gui.helpers.vtkBlenderLikeInteractionStyle import (
     BlenderStyle as _BlenderStyle,
 )
 
-from pymeshup.syntaxedit.core import SyntaxEdit
+from pymeshup_gui.syntaxedit.core import SyntaxEdit
 
 
 class BlenderStyle(_BlenderStyle):

@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QTextEdit
 
 from pygments.styles import get_style_by_name
 
-from pymeshup.syntaxedit.highlightslot import HighlightSlot
+from pymeshup_gui.syntaxedit.highlightslot import HighlightSlot
 
 
 class SyntaxEdit(QTextEdit):

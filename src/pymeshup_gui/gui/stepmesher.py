@@ -1,9 +1,33 @@
 from pathlib import Path
 from random import random
 
+import numpy as np
+from PySide6.QtCore import QEvent, QObject
 from PySide6.QtWidgets import QApplication, QFileDialog, QVBoxLayout, QCheckBox, QMainWindow
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.vtkRenderingCore import vtkRenderer
+
+
+class _FileDropFilter(QObject):
+    """Event filter that enables file drag-and-drop on a QLineEdit."""
+
+    def __init__(self, line_edit):
+        super().__init__(line_edit)
+        self._le = line_edit
+        self._le.setAcceptDrops(True)
+
+    def eventFilter(self, obj, event):
+        if obj is self._le:
+            if event.type() == QEvent.Type.DragEnter:
+                if event.mimeData().hasUrls():
+                    event.acceptProposedAction()
+                    return True
+            elif event.type() == QEvent.Type.Drop:
+                urls = event.mimeData().urls()
+                if urls:
+                    self._le.setText(urls[0].toLocalFile())
+                    return True
+        return super().eventFilter(obj, event)
 
 from pymeshup import STEP
 from pymeshup_gui.gui.forms.step_mesher import Ui_MainWindow
@@ -19,7 +43,10 @@ class StepMesherGui:
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.MainWindow)
 
+        self.MainWindow.setToolTip("StepMesher - CadQuery + VTK")
+
         self.ui.pbBrowse.clicked.connect(self.browse)
+        self.ui.pbLoad.clicked.connect(self.load_step_file)
 
         self.ui.leFilename.textChanged.connect(self.load_step_file)
 
@@ -30,6 +57,9 @@ class StepMesherGui:
         self.ui.pbSave.clicked.connect(self.save_stl)
 
         self.ui.pbBatch.clicked.connect(self.process_all_files_in_folder)
+
+        self._drop_filter = _FileDropFilter(self.ui.leFilename)
+        self.ui.leFilename.installEventFilter(self._drop_filter)
 
         self.step_file : STEP | None = None
 
@@ -57,10 +87,15 @@ class StepMesherGui:
         self.vtkWidget.GetRenderWindow().AddRenderer(self.renderer)
         self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
 
-
-
         self.renderer.SetBackground((254, 254, 254))
         self.create3Dorigin()
+
+        # set camera orientation such that Z is up, X is right and Y is forward
+        camera = self.renderer.GetActiveCamera()
+        camera.SetViewUp(0, 0, 1)
+        camera.SetPosition(20, -100, 20)
+        camera.SetFocalPoint(0, 0, 0)
+        self.renderer.ResetCamera()
 
 
 
@@ -111,6 +146,11 @@ class StepMesherGui:
 
         self.ui.lbFeedback.setText(f"Loaded: {filename}")
 
+        # get the bounding box of the file with scale applied
+        bbox = self.step_file._workplane.val().BoundingBox()
+        info = f"Loaded; size = {bbox.xlen:.1f}m x {bbox.ylen:.1f}m x {bbox.zlen:.1f}m with center at {bbox.center.x:.2f},{bbox.center.z:.2f},{bbox.center.z:.2f}"
+        self.ui.lbInfo.setText(info)
+
     def changed(self):
         if not self.ui.chAutoApply.isChecked():
             return
@@ -120,17 +160,23 @@ class StepMesherGui:
     def update_mesh(self, *args, filename : Path | None = None):
 
         lintol = self.ui.dsLinTol.value()
-        angtol = self.ui.dsAngTol.value()
+        angtol_deg = self.ui.dsAngTol.value()
+        angtol = np.deg2rad(angtol_deg)
 
-        mesh = self.step_file.to_volume(
-            linear_tolerance=lintol,
-            angular_tolerance=angtol,
-        )
+        try:
+            mesh = self.step_file.to_volume(
+                linear_tolerance=lintol,
+                angular_tolerance=angtol,
+            )
 
-        self.ui.lbFeedback.setText(
-            f"Generated mesh with {len(mesh.vertices)} using lin.tol={lintol}, ang.tol={angtol}"
-        )
-
+            self.ui.lbFeedback.setText(
+                f"Generated mesh with {len(mesh.vertices)} vertices using lin.tol={lintol}, ang.tol={angtol}"
+            )
+            self.ui.lbFeedback.setStyleSheet("")
+        except Exception as e:
+            self.ui.lbFeedback.setText(str(e))
+            self.ui.lbFeedback.setStyleSheet("color: red")
+            return
 
         cm = mesh.ms.current_mesh()
 
@@ -153,6 +199,9 @@ class StepMesherGui:
         self.renderer.Render()
 
         self.vtkWidget.update()
+
+        nFaces = len(faces)
+        self.ui.lbInfoMesh.setText(f"{nFaces} faces")
 
     def create3Dorigin(self):
         self.renderer.AddActor(CreateVTKLineActor((0, 0, 0), (10, 0, 0), (254, 0, 0)))

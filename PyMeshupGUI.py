@@ -1,4 +1,4 @@
-from pymeshup.gui.main import QApplication, Gui
+from pymeshup_gui.gui.main import QApplication, Gui
 
 app = QApplication()
 gui = Gui()
