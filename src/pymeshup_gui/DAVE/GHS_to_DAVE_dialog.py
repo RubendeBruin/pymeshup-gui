@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QDialog
 def GHS_to_DAVE_conversion_dialog():
     from PySide6.QtWidgets import QApplication
 
-    from pymeshup.DAVE.GHS_to_DAVE_form import Ui_ConversionDialog
+    from pymeshup_gui.DAVE.GHS_to_DAVE_form import Ui_ConversionDialog
 
     if QApplication.instance() is None:
         app = QApplication()
@@ -21,7 +21,7 @@ def GHS_to_DAVE_conversion_dialog():
         name = dialog.ui.tbVesselName.text()
         resolution_deg = dialog.ui.sbDeg.value()
 
-        from pymeshup.DAVE.GHS_to_DAVE import GHS_to_DAVE
+        from pymeshup_gui.DAVE.GHS_to_DAVE import GHS_to_DAVE
 
         dialog.ui.tbOutput.setPlainText("Running")
         dialog.update()

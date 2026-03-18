@@ -396,6 +396,13 @@ class Gui:
         self.iren.SetInteractorStyle(self.style)
         self.style.callbackSelect = self.select_3d_actor
 
+        # set camera orientation such that Z is up, X is right and Y is forward
+        camera = self.renderer.GetActiveCamera()
+        camera.SetViewUp(0, 0, 1)
+        camera.SetPosition(20, -100, 20)
+        camera.SetFocalPoint(0, 0, 0)
+        self.renderer.ResetCamera()
+
         self.update_period()
         self.update_heading()
 
@@ -413,7 +420,7 @@ class Gui:
             self.fileOpen(path=str(pathlib.Path(__file__).parent / "examples"))
 
     def ghs_to_dave(self, *args):
-        from pymeshup.DAVE.GHS_to_DAVE_dialog import GHS_to_DAVE_conversion_dialog
+        from pymeshup_gui.DAVE.GHS_to_DAVE_dialog import GHS_to_DAVE_conversion_dialog
 
         GHS_to_DAVE_conversion_dialog()
 

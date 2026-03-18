@@ -167,6 +167,7 @@ class StepMesherGui:
             mesh = self.step_file.to_volume(
                 linear_tolerance=lintol,
                 angular_tolerance=angtol,
+                filename=filename,
             )
 
             self.ui.lbFeedback.setText(
@@ -210,9 +211,6 @@ class StepMesherGui:
 
     def save_stl(self):
         file = Path(self.ui.leFilename.text())
-
-        self.ui.leFilename.setText(str(file))
-        self.load_step_file()
 
         # output file is same as input only with .stl extension
         filename = file.with_suffix(".stl")
