@@ -17,8 +17,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDoubleSpinBox, QFrame,
     QGridLayout, QGroupBox, QLabel, QLineEdit,
-    QMainWindow, QMenuBar, QPushButton, QSizePolicy,
-    QStatusBar, QVBoxLayout, QWidget)
+    QMainWindow, QMenuBar, QPushButton, QRadioButton,
+    QSizePolicy, QStatusBar, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -29,11 +29,40 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout_2 = QGridLayout(self.centralwidget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.groupBox = QGroupBox(self.centralwidget)
-        self.groupBox.setObjectName(u"groupBox")
+        self.groupBox_3 = QGroupBox(self.centralwidget)
+        self.groupBox_3.setObjectName(u"groupBox_3")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.groupBox_3.sizePolicy().hasHeightForWidth())
+        self.groupBox_3.setSizePolicy(sizePolicy)
+        self.verticalLayout = QVBoxLayout(self.groupBox_3)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.pbSave = QPushButton(self.groupBox_3)
+        self.pbSave.setObjectName(u"pbSave")
+
+        self.verticalLayout.addWidget(self.pbSave)
+
+        self.pbBatch = QPushButton(self.groupBox_3)
+        self.pbBatch.setObjectName(u"pbBatch")
+
+        self.verticalLayout.addWidget(self.pbBatch)
+
+
+        self.gridLayout_2.addWidget(self.groupBox_3, 3, 0, 1, 1)
+
+        self.view3d = QWidget(self.centralwidget)
+        self.view3d.setObjectName(u"view3d")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy1.setHorizontalStretch(1)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.view3d.sizePolicy().hasHeightForWidth())
+        self.view3d.setSizePolicy(sizePolicy1)
+
+        self.gridLayout_2.addWidget(self.view3d, 0, 1, 6, 2)
+
+        self.groupBox = QGroupBox(self.centralwidget)
+        self.groupBox.setObjectName(u"groupBox")
         sizePolicy.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
         self.groupBox.setSizePolicy(sizePolicy)
         self.gridLayout_4 = QGridLayout(self.groupBox)
@@ -75,6 +104,18 @@ class Ui_MainWindow(object):
 
 
         self.gridLayout_2.addWidget(self.groupBox, 0, 0, 1, 1)
+
+        self.lbFeedback = QLabel(self.centralwidget)
+        self.lbFeedback.setObjectName(u"lbFeedback")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.lbFeedback.sizePolicy().hasHeightForWidth())
+        self.lbFeedback.setSizePolicy(sizePolicy2)
+        self.lbFeedback.setFrameShape(QFrame.Shape.Box)
+        self.lbFeedback.setWordWrap(True)
+
+        self.gridLayout_2.addWidget(self.lbFeedback, 5, 0, 1, 1)
 
         self.groupBox_2 = QGroupBox(self.centralwidget)
         self.groupBox_2.setObjectName(u"groupBox_2")
@@ -139,47 +180,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout_2.addWidget(self.groupBox_2, 1, 0, 1, 1)
 
-        self.view3d = QWidget(self.centralwidget)
-        self.view3d.setObjectName(u"view3d")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
-        sizePolicy1.setHorizontalStretch(1)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.view3d.sizePolicy().hasHeightForWidth())
-        self.view3d.setSizePolicy(sizePolicy1)
-
-        self.gridLayout_2.addWidget(self.view3d, 0, 1, 5, 2)
-
-        self.lbFeedback = QLabel(self.centralwidget)
-        self.lbFeedback.setObjectName(u"lbFeedback")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.lbFeedback.sizePolicy().hasHeightForWidth())
-        self.lbFeedback.setSizePolicy(sizePolicy2)
-        self.lbFeedback.setFrameShape(QFrame.Shape.Box)
-        self.lbFeedback.setWordWrap(True)
-
-        self.gridLayout_2.addWidget(self.lbFeedback, 4, 0, 1, 1)
-
-        self.groupBox_3 = QGroupBox(self.centralwidget)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        sizePolicy.setHeightForWidth(self.groupBox_3.sizePolicy().hasHeightForWidth())
-        self.groupBox_3.setSizePolicy(sizePolicy)
-        self.verticalLayout = QVBoxLayout(self.groupBox_3)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.pbSave = QPushButton(self.groupBox_3)
-        self.pbSave.setObjectName(u"pbSave")
-
-        self.verticalLayout.addWidget(self.pbSave)
-
-        self.pbBatch = QPushButton(self.groupBox_3)
-        self.pbBatch.setObjectName(u"pbBatch")
-
-        self.verticalLayout.addWidget(self.pbBatch)
-
-
-        self.gridLayout_2.addWidget(self.groupBox_3, 2, 0, 1, 1)
-
         self.groupBox_4 = QGroupBox(self.centralwidget)
         self.groupBox_4.setObjectName(u"groupBox_4")
         sizePolicy.setHeightForWidth(self.groupBox_4.sizePolicy().hasHeightForWidth())
@@ -192,7 +192,25 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.addWidget(self.label_2)
 
 
-        self.gridLayout_2.addWidget(self.groupBox_4, 3, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.groupBox_4, 4, 0, 1, 1)
+
+        self.groupBox_5 = QGroupBox(self.centralwidget)
+        self.groupBox_5.setObjectName(u"groupBox_5")
+        self.verticalLayout_3 = QVBoxLayout(self.groupBox_5)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.rbWireframe = QRadioButton(self.groupBox_5)
+        self.rbWireframe.setObjectName(u"rbWireframe")
+        self.rbWireframe.setChecked(True)
+
+        self.verticalLayout_3.addWidget(self.rbWireframe)
+
+        self.rbSolid = QRadioButton(self.groupBox_5)
+        self.rbSolid.setObjectName(u"rbSolid")
+
+        self.verticalLayout_3.addWidget(self.rbSolid)
+
+
+        self.gridLayout_2.addWidget(self.groupBox_5, 2, 0, 1, 1)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -219,6 +237,9 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Export", None))
+        self.pbSave.setText(QCoreApplication.translate("MainWindow", u"Save this mesh as .stl", None))
+        self.pbBatch.setText(QCoreApplication.translate("MainWindow", u"Batch process all STEP files in this folder using these settings", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Input", None))
         self.pbLoad.setText(QCoreApplication.translate("MainWindow", u"(re)load", None))
         self.leScale.setText(QCoreApplication.translate("MainWindow", u".001", None))
@@ -226,6 +247,7 @@ class Ui_MainWindow(object):
         self.label.setText(QCoreApplication.translate("MainWindow", u"step file", None))
         self.lbInfo.setText(QCoreApplication.translate("MainWindow", u"info", None))
         self.pbBrowse.setText(QCoreApplication.translate("MainWindow", u"Browse", None))
+        self.lbFeedback.setText(QCoreApplication.translate("MainWindow", u"Ready...", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Meshing", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"Linear tolerance", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"[m]", None))
@@ -234,11 +256,10 @@ class Ui_MainWindow(object):
         self.chAutoApply.setText(QCoreApplication.translate("MainWindow", u"auto apply", None))
         self.pbApply.setText(QCoreApplication.translate("MainWindow", u"Apply", None))
         self.lbInfoMesh.setText(QCoreApplication.translate("MainWindow", u"info", None))
-        self.lbFeedback.setText(QCoreApplication.translate("MainWindow", u"Ready...", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Export", None))
-        self.pbSave.setText(QCoreApplication.translate("MainWindow", u"Save this mesh as .stl", None))
-        self.pbBatch.setText(QCoreApplication.translate("MainWindow", u"Batch process all STEP files in this folder using these settings", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"A: all, F, focus<br>Middle mouse to rotate<br>Hold shift to pan", None))
+        self.label_2.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>A: all, F, focus on selection<br/>Middle mouse to rotate<br/>Hold shift to pan</p></body></html>", None))
+        self.groupBox_5.setTitle(QCoreApplication.translate("MainWindow", u"Display", None))
+        self.rbWireframe.setText(QCoreApplication.translate("MainWindow", u"Wireframe", None))
+        self.rbSolid.setText(QCoreApplication.translate("MainWindow", u"Solid", None))
     # retranslateUi
 

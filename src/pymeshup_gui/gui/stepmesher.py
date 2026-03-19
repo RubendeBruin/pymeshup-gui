@@ -43,7 +43,7 @@ class StepMesherGui:
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.MainWindow)
 
-        self.MainWindow.setToolTip("StepMesher - CadQuery + VTK")
+        self.MainWindow.setWindowTitle("StepMesher; gluing CadQuery & vtk and adding a gui [pymeshup]")
 
         self.ui.pbBrowse.clicked.connect(self.browse)
         self.ui.pbLoad.clicked.connect(self.load_step_file)
@@ -61,6 +61,9 @@ class StepMesherGui:
         self._drop_filter = _FileDropFilter(self.ui.leFilename)
         self.ui.leFilename.installEventFilter(self._drop_filter)
 
+        self.ui.rbWireframe.toggled.connect(self.update_actor_view)
+        self.ui.rbSolid.toggled.connect(self.update_actor_view)
+
         self.step_file : STEP | None = None
 
         self.MainWindow.show()
@@ -74,6 +77,8 @@ class StepMesherGui:
         self.MainWindow.closeEvent = self.on_dialog_closed
 
         self.ui.leFilename.setText(r"Drop or enter your file here or press ...")
+
+        self._actor = None
 
 
 
@@ -151,6 +156,11 @@ class StepMesherGui:
         info = f"Loaded; size = {bbox.xlen:.1f}m x {bbox.ylen:.1f}m x {bbox.zlen:.1f}m with center at {bbox.center.x:.2f},{bbox.center.z:.2f},{bbox.center.z:.2f}"
         self.ui.lbInfo.setText(info)
 
+        self.changed()
+
+        if not self.ui.chAutoApply.isChecked():
+            self.ui.pbApply.setStyleSheet("background-color: rgb(0, 200, 0);")
+
     def changed(self):
         if not self.ui.chAutoApply.isChecked():
             return
@@ -184,6 +194,7 @@ class StepMesherGui:
         vertices = cm.vertex_matrix()
         faces = cm.face_matrix()
         actor = CreateVTKActor(vertices, faces)
+        self._actor = actor
 
         # use a random color
         red = random()
@@ -192,7 +203,8 @@ class StepMesherGui:
 
 
         actor.GetProperty().SetColor(red, green, blue)
-        actor.GetProperty().SetRepresentationToWireframe()
+        self.update_actor_view()
+
 
         self.renderer.RemoveAllViewProps()
 
@@ -202,7 +214,26 @@ class StepMesherGui:
         self.vtkWidget.update()
 
         nFaces = len(faces)
-        self.ui.lbInfoMesh.setText(f"{nFaces} faces")
+        try:
+            volume = f"{mesh.volume:.3f} m3"
+        except:
+            volume = "Not a volume"
+
+
+        self.ui.lbInfoMesh.setText(f"{nFaces} faces, volume = {volume}")
+        self.ui.pbApply.setStyleSheet("")
+
+    def update_actor_view(self):
+        if self._actor is None:
+            return
+
+        if self.ui.rbWireframe.isChecked():
+            self._actor.GetProperty().SetRepresentationToWireframe()
+        else:
+            self._actor.GetProperty().SetRepresentationToSurface()
+
+        self.vtkWidget.update()
+
 
     def create3Dorigin(self):
         self.renderer.AddActor(CreateVTKLineActor((0, 0, 0), (10, 0, 0), (254, 0, 0)))
