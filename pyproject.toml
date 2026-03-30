@@ -29,7 +29,7 @@ dependencies = [
     "pymeshlab",
     "capytaine>=2.2",
     "mafredo",
-    "netcdf4>=1.7.2",
+    "h5py",
     "pyinstaller"
 ]
 urls = { "Documentation" = "https://open-ocean.org/" }

@@ -23,21 +23,27 @@ casadi_binaries = [(src, 'casadi') for src, _ in casadi_binaries]
 # ---- pymeshlab
 pymeshlab_datas, pymeshlab_binaries, pymeshlab_hiddenimports = collect_all('pymeshlab')
 
+# ---- h5py / h5netcdf
+h5py_datas, h5py_binaries, h5py_hiddenimports = collect_all('h5py')
+h5netcdf_datas, h5netcdf_binaries, h5netcdf_hiddenimports = collect_all('h5netcdf')
+
 # ---- vedo submodules
 vedo_hiddenimports = collect_submodules('vedo')
 
 datas = [
     ('src/pymeshup_gui/gui/examples', 'examples'),
     ('src/pymeshup_gui/resources', 'pymeshup_gui/resources'),
-] + vedo_added_files + casadi_datas + pymeshlab_datas
+] + vedo_added_files + casadi_datas + pymeshlab_datas + h5py_datas + h5netcdf_datas
 
-binaries = casadi_binaries + pymeshlab_binaries
+binaries = casadi_binaries + pymeshlab_binaries + h5py_binaries + h5netcdf_binaries
 
 hiddenimports = (
     vedo_hiddenimports
     + casadi_hiddenimports
     + pymeshlab_hiddenimports
-    + ['casadi._casadi']
+    + h5py_hiddenimports
+    + h5netcdf_hiddenimports
+    + ['casadi._casadi', 'h5py', 'h5netcdf']
     + [
         'vtkmodules.vtkCommonMath',
         'vtkmodules.vtkCommonTransforms',

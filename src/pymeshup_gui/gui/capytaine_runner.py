@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-import netCDF4 # required for saving - fallback to scipy.io.netcdf causes issues
+import h5py, h5netcdf  # do not remove!
 
 import numpy as np
 from numpy import pi
