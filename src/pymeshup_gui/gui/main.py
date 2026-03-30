@@ -451,7 +451,7 @@ class Gui:
 
     def run_captyaine(self, dryrun=False):
         try:
-            from pymeshup.gui.capytaine_runner import run_capytaine
+            from pymeshup_gui.gui.capytaine_runner import run_capytaine
         except Exception as E:
             print(self.ui.teFeedback.append(str(E)))
             return
@@ -995,7 +995,7 @@ class Gui:
     # ---- frame digitizer
 
     def add_frame_using_digitizer(self):
-        from pymeshup.gui.digitizer.digitizer import DigitizerDialog
+        from pymeshup_gui.gui.digitizer.digitizer import DigitizerDialog
 
         if self._digitizer_dialog is None:
             self._digitizer_dialog = DigitizerDialog()

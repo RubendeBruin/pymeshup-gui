@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QSizePolicy,
 )
-from PySide6.QtGui import QGuiApplication, QImage  # QImageReader is not used
+from PySide6.QtGui import QGuiApplication, QImage, QTransform
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -18,10 +18,11 @@ import numpy as np
 
 
 class DraggablePoint:
-    def __init__(self, point, ax, on_update):
+    def __init__(self, point, ax, on_update, on_remove=None):
         self.point = point
         self.ax = ax
         self.on_update = on_update
+        self.on_remove = on_remove
         self.press = None
         self.background = None
         self.connect()
@@ -43,6 +44,13 @@ class DraggablePoint:
         contains, attrd = self.point.contains(event)
         if not contains:
             return
+
+        # Double-click removes the point
+        if event.dblclick:
+            if self.on_remove:
+                self.on_remove(self)
+            return
+
         self.press = self.point.get_offsets().flatten(), event.xdata, event.ydata
         canvas = self.point.figure.canvas
         axes = self.point.axes
@@ -93,6 +101,7 @@ class DigitizerDialog(QDialog):
             None  # Matplotlib artist for the background image
         )
         self._stored_qimage = None  # To store the QImage from clipboard
+        self._connecting_line = None  # Line artist connecting the points
 
         # Main layout
         main_layout = QVBoxLayout(self)
@@ -117,11 +126,24 @@ class DigitizerDialog(QDialog):
         controls_layout.addWidget(apply_limits_button)
         controls_layout.addWidget(paste_image_button)
 
-        # Add clear button
+        # Add flip and clear buttons
+        flip_image_button = QPushButton("Flip Image")
+        controls_layout.addWidget(flip_image_button)
         clear_button = QPushButton("Clear All")
         controls_layout.addWidget(clear_button)
 
         main_layout.addLayout(controls_layout)
+
+        # Middle area: coordinates on the left, plot on the right
+        middle_layout = QHBoxLayout()
+
+        coords_panel = QVBoxLayout()
+        coords_panel.addWidget(QLabel("Coordinates:"))
+        self.coordinates_edit = QTextEdit()
+        self.coordinates_edit.setReadOnly(True)
+        self.coordinates_edit.setFixedWidth(180)
+        coords_panel.addWidget(self.coordinates_edit)
+        middle_layout.addLayout(coords_panel)
 
         # Matplotlib Figure
         self.fig = Figure(figsize=(5, 4), dpi=100)
@@ -130,13 +152,9 @@ class DigitizerDialog(QDialog):
         self.canvas.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        main_layout.addWidget(self.canvas)
+        middle_layout.addWidget(self.canvas)
 
-        # Coordinates display
-        self.coordinates_edit = QTextEdit()
-        self.coordinates_edit.setReadOnly(True)
-        main_layout.addWidget(QLabel("Coordinates:"))
-        main_layout.addWidget(self.coordinates_edit)
+        main_layout.addLayout(middle_layout)
 
         # Add OK button at the bottom
         bottom_layout = QHBoxLayout()
@@ -145,13 +163,14 @@ class DigitizerDialog(QDialog):
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(self.accept)  # QDialog's accept method
         bottom_layout.addStretch()
-        bottom_layout.addWidget(cancel_button)
         bottom_layout.addWidget(ok_button)
+        bottom_layout.addWidget(cancel_button)
         main_layout.addLayout(bottom_layout)
 
         # Connections
         apply_limits_button.clicked.connect(self.apply_axis_limits)
         paste_image_button.clicked.connect(self.paste_background_image)
+        flip_image_button.clicked.connect(self.flip_background_image)
         clear_button.clicked.connect(self.clear_all_points)  # Connect clear button
         self.canvas.mpl_connect("button_press_event", self.on_plot_click)
 
@@ -192,6 +211,15 @@ class DigitizerDialog(QDialog):
         else:
             print("No image found on clipboard.")
 
+    def flip_background_image(self):
+        if self._stored_qimage and not self._stored_qimage.isNull():
+            self._stored_qimage = self._stored_qimage.transformed(
+                QTransform().scale(-1, 1)
+            )
+            self.redraw_plot()
+        else:
+            print("No background image to flip.")
+
     def on_plot_click(self, event):
         if event.inaxes == self.ax and event.button == 1:  # Left click
             # Check if click is on an existing point (handled by DraggablePoint)
@@ -205,11 +233,21 @@ class DigitizerDialog(QDialog):
                 self.add_point(x, y)
 
     def add_point(self, x, y):
-        # self.points_data is updated by update_coordinates_display from draggable_points
-        point_plot = self.ax.scatter([x], [y], c="red", picker=True)
-        dp = DraggablePoint(point_plot, self.ax, self.update_coordinates_display)
+        point_plot = self.ax.scatter([x], [y], c="red", marker="+", s=100, picker=True)
+        dp = DraggablePoint(point_plot, self.ax, self.update_coordinates_display, self.remove_point)
         self.draggable_points.append(dp)
-        self.update_coordinates_display()  # This will also add the new point to self.points_data
+        self.update_coordinates_display()
+        self.canvas.draw_idle()
+
+    def remove_point(self, dp):
+        dp.disconnect()
+        try:
+            dp.point.remove()
+        except Exception:
+            pass
+        if dp in self.draggable_points:
+            self.draggable_points.remove(dp)
+        self.update_coordinates_display()
         self.canvas.draw_idle()
 
     def update_coordinates_display(self):
@@ -220,10 +258,33 @@ class DigitizerDialog(QDialog):
                 new_points_data.append(list(offsets[0]))
         self.points_data = new_points_data
 
+        self._update_connecting_line()
+
         text = ""
         for i, (x, y) in enumerate(self.points_data):
             text += f"Point {i + 1}: {x:.2f}, {y:.2f}\n"
         self.coordinates_edit.setText(text)
+
+    def _update_connecting_line(self):
+        """Draw/update a line connecting all points in order."""
+        # Remove existing line if present
+        if hasattr(self, "_connecting_line") and self._connecting_line is not None:
+            try:
+                self._connecting_line.remove()
+            except Exception:
+                pass
+            self._connecting_line = None
+
+        if len(self.points_data) >= 2:
+            xs = [p[0] for p in self.points_data]
+            ys = [p[1] for p in self.points_data]
+            (self._connecting_line,) = self.ax.plot(
+                xs, ys, color="purple", linewidth=0.8, zorder=1
+            )
+        else:
+            self._connecting_line = None
+
+        self.canvas.draw_idle()
 
     def redraw_plot(self):
         try:
@@ -303,8 +364,8 @@ class DigitizerDialog(QDialog):
         self.points_data.clear()
 
         for x, y in old_points_data:
-            point_plot = self.ax.scatter([x], [y], c="red", picker=True)
-            dp = DraggablePoint(point_plot, self.ax, self.update_coordinates_display)
+            point_plot = self.ax.scatter([x], [y], c="red", marker="+", s=100, picker=True)
+            dp = DraggablePoint(point_plot, self.ax, self.update_coordinates_display, self.remove_point)
             self.draggable_points.append(dp)
 
         self.update_coordinates_display()  # Sync self.points_data and text edit

@@ -1,70 +1,72 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 import sys
 
-from PyInstaller.utils.hooks import collect_all
-
-datas = [('src/pymeshup/gui/examples','examples')]
-binaries = []
-
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 
+# ---- vedo fonts
 from vedo import installdir as vedo_installdir
 vedo_fontsdir = os.path.join(vedo_installdir, 'fonts')
 print('vedo installation is in', vedo_installdir)
 print('fonts are in', vedo_fontsdir)
 
-block_cipher = None
-
 vedo_added_files = [
-    (os.path.join(vedo_fontsdir,'*'), os.path.join('vedo','fonts')),
+    (os.path.join(vedo_fontsdir, '*'), os.path.join('vedo', 'fonts')),
 ]
 
+# ---- casadi (binaries remapped so _casadi.pyd and its DLLs land in casadi/)
+casadi_datas, casadi_binaries, casadi_hiddenimports = collect_all('casadi')
+casadi_binaries = [(src, 'casadi') for src, _ in casadi_binaries]
 
+# ---- pymeshlab
+pymeshlab_datas, pymeshlab_binaries, pymeshlab_hiddenimports = collect_all('pymeshlab')
 
-hiddenimports = ["vtkmodules.vtkCommonMath",
-                 "vtkmodules.vtkCommonTransforms",
-                 "vtkmodules.vtkCommonExecutionModel",
-                 "vtkmodules.vtkIOCore",
-                 "vtkmodules.vtkRenderingCore",
-                 "vtkmodules.vtkFiltersCore",
-                 "vtkmodules.vtkCommonMisc",
-                 "vtkmodules.vtkRenderingVolumeOpenGL2",
-                 "vtkmodules.vtkImagingMath",
-				 "vtkmodules.all",
-				 # ----- capytaine
-				 'numpy',
-                 'logging',
-                 'capytaine',
-                 'matplotlib',
-                 'scipy',
-                 'capytaine.green_functions',
-                 'capytaine.green_functions.libs',
-                 'capytaine.green_functions.libs.Delhommeau_float64',
-                 'capytaine.green_functions.libs.Delhommeau_float32',
-                 'capytaine.green_functions.libs.XieDelhommeau_float64',
-                 'capytaine.green_functions.libs.XieDelhommeau_float32',
-                 # ---------------
-                 'OCP',
-                 'casadi',
-                 'casadi._casadi',
-                  ]
+# ---- vedo submodules
+vedo_hiddenimports = collect_submodules('vedo')
 
+datas = [
+    ('src/pymeshup_gui/gui/examples', 'examples'),
+    ('src/pymeshup_gui/resources', 'pymeshup_gui/resources'),
+] + vedo_added_files + casadi_datas + pymeshlab_datas
 
-tmp_ret = collect_all('pymeshlab')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+binaries = casadi_binaries + pymeshlab_binaries
 
-tmp_ret = collect_all('casadi')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-
-datas += vedo_added_files
-
-
-block_cipher = None
+hiddenimports = (
+    vedo_hiddenimports
+    + casadi_hiddenimports
+    + pymeshlab_hiddenimports
+    + ['casadi._casadi']
+    + [
+        'vtkmodules.vtkCommonMath',
+        'vtkmodules.vtkCommonTransforms',
+        'vtkmodules.vtkCommonExecutionModel',
+        'vtkmodules.vtkIOCore',
+        'vtkmodules.vtkRenderingCore',
+        'vtkmodules.vtkFiltersCore',
+        'vtkmodules.vtkCommonMisc',
+        'vtkmodules.vtkRenderingVolumeOpenGL2',
+        'vtkmodules.vtkImagingMath',
+        'vtkmodules.all',
+        # capytaine
+        'numpy',
+        'logging',
+        'capytaine',
+        'matplotlib',
+        'scipy',
+        'capytaine.green_functions',
+        'capytaine.green_functions.libs',
+        'capytaine.green_functions.libs.Delhommeau_float64',
+        'capytaine.green_functions.libs.Delhommeau_float32',
+        'capytaine.green_functions.libs.XieDelhommeau_float64',
+        'capytaine.green_functions.libs.XieDelhommeau_float32',
+        'OCP',
+    ]
+)
 
 hookconfig = dict()
-hookconfig['matplotlib'] = {"backends":"QtAgg"}  # Needed ???
-
+hookconfig['matplotlib'] = {'backends': 'QtAgg'}
 
 a = Analysis(
     ['PyMeshupGUI.py'],
@@ -74,15 +76,13 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig=hookconfig,
-    runtime_hooks=[],
+    runtime_hooks=['pyi_rth_casadi.py'],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
+    optimize=0,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
@@ -100,20 +100,15 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='src/pymeshup_gui/resources/pymeshup_logo.ico',
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
-    a.zipfiles,
     a.datas,
     strip=False,
     upx=True,
     upx_exclude=[],
     name='PyMeshupGUI',
 )
-
-print('==================================================================================')
-print('==================================================================================')
-print('copy-paste the origin (site-packages) casadi folder into the _internal folder')
-print('==================================================================================')
-print('==================================================================================')
