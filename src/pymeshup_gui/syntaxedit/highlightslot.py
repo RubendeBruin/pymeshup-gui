@@ -21,7 +21,9 @@ class HighlightSlot:
                 ensurenl=False,
             ),
             HtmlFormatter(
-                lineseparator="<br />",
+                # Keep line breaks as text newlines; newer Pygments versions may escape
+                # HTML tags provided as lineseparator, causing literal <br> text.
+                lineseparator="\n",
                 prestyles=f"white-space:pre-wrap; font-family: '{font}';",
                 noclasses=True,
                 nobackground=True,

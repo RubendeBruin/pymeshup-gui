@@ -30,6 +30,7 @@ dependencies = [
     "capytaine>=2.2",
     "mafredo",
     "h5py",
+    "pygments",
     "pyinstaller"
 ]
 urls = { "Documentation" = "https://open-ocean.org/" }
