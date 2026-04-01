@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QTextEdit
 
 from pygments.styles import get_style_by_name
+from pygments.token import Token
 
 from pymeshup_gui.syntaxedit.highlightslot import HighlightSlot
 
@@ -43,11 +44,19 @@ class SyntaxEdit(QTextEdit):
         self.setPlainText(content)
 
     def _updateBackgroundColor(self):
+        rules = []
+
         if self._use_theme_background:
             style = get_style_by_name(self._theme)
-            self.setStyleSheet(
-                f"QTextEdit {{ background-color: {style.background_color}; }}"
-            )
+            if style.background_color:
+                rules.append(f"background-color: {style.background_color};")
+
+            default_text_style = style.style_for_token(Token.Text)
+            if default_text_style["color"]:
+                rules.append(f"color: #{default_text_style['color']};")
+
+        if rules:
+            self.setStyleSheet(f"QTextEdit {{ {' '.join(rules)} }}")
         else:
             self.setStyleSheet("")
 
@@ -99,8 +108,7 @@ class SyntaxEdit(QTextEdit):
     def keyPressEvent(self, event):
         if (
             self._use_smart_indentation
-            and event.key() == Qt.Key_Return
-            or event.key() == Qt.Key_Enter
+            and event.key() in (Qt.Key_Return, Qt.Key_Enter)
         ):
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
