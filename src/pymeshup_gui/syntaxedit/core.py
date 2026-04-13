@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QTextEdit
 from pygments.styles import get_style_by_name
 from pygments.token import Token
 
-from pymeshup_gui.syntaxedit.highlightslot import HighlightSlot
+from pymeshup_gui.syntaxedit.highlightslot import PygmentsHighlighter
 
 
 class SyntaxEdit(QTextEdit):
@@ -38,8 +38,7 @@ class SyntaxEdit(QTextEdit):
 
         self._updateBackgroundColor()
 
-        self._highlight_slot = HighlightSlot(self)
-        self.textChanged.connect(self._highlight_slot.execute)
+        self._highlighter = PygmentsHighlighter(self.document(), syntax, theme)
 
         self.setPlainText(content)
 
@@ -68,7 +67,7 @@ class SyntaxEdit(QTextEdit):
 
     def setSyntax(self, syntax):
         self._syntax = syntax
-        self.textChanged.emit()
+        self._highlighter.setSyntax(syntax)
 
     def syntax(self):
         return self._syntax
@@ -79,7 +78,7 @@ class SyntaxEdit(QTextEdit):
     def setTheme(self, theme):
         self._theme = theme
         self._updateBackgroundColor()
-        self.textChanged.emit()
+        self._highlighter.setTheme(theme)
 
     def indentationSize(self):
         return self._indentation_size
