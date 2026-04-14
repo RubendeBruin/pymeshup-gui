@@ -38,7 +38,7 @@ from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
 from vtkmodules.util.numpy_support import numpy_to_vtk, numpy_to_vtkIdTypeArray
 
-from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer, vtkProperty
 
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
@@ -219,6 +219,9 @@ class Gui:
     def __init__(self):
         self._actors = []
         self._actor_names = {}
+        self._normal_actors = {}        # key → normal-arrow VTK actor
+        self._show_backface_color = True
+        self._show_normals = False
 
         self._digitizer_dialog = None  # Digitizer dialog instance
         self._first_run = True  # Flag to check if this is the first run
@@ -295,6 +298,22 @@ class Gui:
         self.ui.actionOpen_GSH_to_DAVE_conversion_tool.triggered.connect(
             self.ghs_to_dave
         )
+
+        # ---- View menu (normals visualisation)
+        view_menu = self.ui.menubar.addMenu("View")
+
+        self._action_backface = QAction("Backface coloring  (red = backside => should be inside)", self.MainWindow)
+        self._action_backface.setCheckable(True)
+        self._action_backface.setChecked(True)
+        self._action_backface.triggered.connect(self.toggle_backface_color)
+        view_menu.addAction(self._action_backface)
+
+        self._action_show_normals = QAction("Show normal arrows", self.MainWindow)
+        self._action_show_normals.setCheckable(True)
+        self._action_show_normals.setChecked(False)
+        self._action_show_normals.setShortcut("Ctrl+N")
+        self._action_show_normals.triggered.connect(self.toggle_normal_arrows)
+        view_menu.addAction(self._action_show_normals)
 
         # ---- Frames
 
@@ -692,6 +711,8 @@ class Gui:
             visible = item.checkState() == Qt.CheckState.Checked
             self.volumes[key].actor.SetVisibility(visible)
 
+        self._sync_normal_actor_visibility()
+
         self.renderer.Render()
         self.vtkWidget.update()
 
@@ -700,8 +721,124 @@ class Gui:
         self.renderer.AddActor(CreateVTKLineActor((0, 0, 0), (0, 10, 0), (0, 254, 0)))
         self.renderer.AddActor(CreateVTKLineActor((0, 0, 0), (0, 0, 10), (0, 0, 254)))
 
+    # --- Normal / backface helpers
+
+    def _apply_backface_color(self, actor):
+        """Apply (or remove) the red backface property on a VTK actor.
+
+        NOTE: actor.SetBackfaceProperty(None) causes a segfault (0xC0000005)
+        in the VTK Python bindings because it passes a null pointer to the
+        underlying C++ method.  Instead, when disabling the backface tint we
+        deep-copy the front-face property onto the back face so both sides
+        render identically, which is visually equivalent to 'no backface colour'.
+        """
+        if self._show_backface_color:
+            back_prop = vtkProperty()
+            back_prop.SetColor(0.9, 0.1, 0.1)   # red
+            back_prop.SetOpacity(1.0)
+            actor.SetBackfaceProperty(back_prop)
+        else:
+            # Mirror the front-face property – avoids the null-pointer crash.
+            back_prop = vtkProperty()
+            back_prop.DeepCopy(actor.GetProperty())
+            actor.SetBackfaceProperty(back_prop)
+
+    def toggle_backface_color(self):
+        self._show_backface_color = self._action_backface.isChecked()
+        for actor in self._actors:
+            self._apply_backface_color(actor)
+        self.renderer.Render()
+        self.vtkWidget.update()
+
+    def _build_normal_actor(self, key, m):
+        """Return a single VTK actor that shows one short line per face normal."""
+        vertices = m.ms.current_mesh().vertex_matrix()
+        faces = m.ms.current_mesh().face_matrix()
+
+        if len(faces) == 0:
+            return None
+
+        v0 = vertices[faces[:, 0]]
+        v1 = vertices[faces[:, 1]]
+        v2 = vertices[faces[:, 2]]
+
+        centers = (v0 + v1 + v2) / 3.0
+        raw_normals = np.cross(v1 - v0, v2 - v0)
+        norms = np.linalg.norm(raw_normals, axis=1, keepdims=True)
+        norms = np.where(norms < 1e-10, 1.0, norms)
+        unit_normals = raw_normals / norms
+
+        # Scale: 2 % of the mesh bounding-box diagonal, minimum 0.01 m
+        bbox = np.ptp(vertices, axis=0)
+        scale = max(float(np.linalg.norm(bbox)) * 0.04, 0.01)
+
+        ends = centers + unit_normals * scale
+        n = len(centers)
+
+        # Pack start + end points into one vtkPoints array
+        all_pts = np.ascontiguousarray(np.vstack([centers, ends]))
+        vtk_pts = vtkPoints()
+        vtk_pts.SetData(numpy_to_vtk(all_pts.astype(float), deep=True))
+
+        # Build one VTK_LINE cell per face
+        # Cell format: [2, start_idx, end_idx]
+        line_ids = np.empty((n, 3), dtype=np.int64)
+        line_ids[:, 0] = 2
+        line_ids[:, 1] = np.arange(n)
+        line_ids[:, 2] = np.arange(n) + n
+        vtk_cells = vtkCellArray()
+        vtk_cells.SetCells(n, numpy_to_vtkIdTypeArray(line_ids.ravel(), deep=True))
+
+        poly = vtkPolyData()
+        poly.SetPoints(vtk_pts)
+        poly.SetLines(vtk_cells)
+
+        mapper = vtkPolyDataMapper()
+        mapper.SetInputData(poly)
+
+        actor = vtkActor()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(0.0, 0.85, 1.0)   # cyan
+        actor.GetProperty().SetLineWidth(1.5)
+        return actor
+
+    def _rebuild_normal_actors(self):
+        """(Re)build all normal-arrow actors and add them to the renderer."""
+        # Remove old ones
+        for a in self._normal_actors.values():
+            self.renderer.RemoveActor(a)
+        self._normal_actors.clear()
+
+        if not self._show_normals:
+            return
+
+        for key, m in self.volumes.items():
+            actor = self._build_normal_actor(key, m)
+            if actor is None:
+                continue
+            self._normal_actors[key] = actor
+            self.renderer.AddActor(actor)
+
+    def toggle_normal_arrows(self):
+        self._show_normals = self._action_show_normals.isChecked()
+        self._rebuild_normal_actors()
+        # Sync visibility with the volume list
+        self._sync_normal_actor_visibility()
+        self.renderer.Render()
+        self.vtkWidget.update()
+
+    def _sync_normal_actor_visibility(self):
+        """Keep normal-arrow actors in sync with the volume check-boxes."""
+        for irow in range(self.ui.listVolumes.count()):
+            item = self.ui.listVolumes.item(irow)
+            key = item.text()
+            visible = item.checkState() == Qt.CheckState.Checked
+            if key in self._normal_actors:
+                self._normal_actors[key].SetVisibility(
+                    visible and self._show_normals
+                )
+
     def update_3dplotter(self):
-        # add volumes to plotter
 
         # try to capture the current state of the renderer,
         # so that we can restore it later
@@ -718,7 +855,8 @@ class Gui:
 
         self.renderer.RemoveAllViewProps()
         self._actors.clear()
-        self._actor_names.clear()  # keep mapping in sync with scene  # <-- add this
+        self._actor_names.clear()  # keep mapping in sync with scene
+        self._normal_actors.clear()  # removed along with all view props
         self.create3Dorigin()
 
         icol = 0
@@ -735,7 +873,13 @@ class Gui:
             actor.SetVisibility(False)
             actor.GetProperty().SetColor(list(COLORMAP(icol % 20)[:3]))
             m.actor = actor
+            # Apply backface colour AFTER the front-face colour is set so that
+            # DeepCopy (used when disabling the tint) picks up the right colour.
+            self._apply_backface_color(actor)
             icol += 1
+
+        # Rebuild normal-arrow actors if the toggle is active
+        self._rebuild_normal_actors()
 
         self.renderer.Render()
         try:
@@ -813,8 +957,8 @@ class Gui:
 
     def fileSaveAs(self):
         fn, _ = QFileDialog.getSaveFileName(
-            self.MainWindow, "Save as...", self.filename or "", "PyMeshUp files (*.pym)"
-        )
+           self.MainWindow, "Save as...", self.filename or self.curdir or "", "PyMeshUp files (*.pym)"
+           )
 
         if not fn:
             print("Error saving")
