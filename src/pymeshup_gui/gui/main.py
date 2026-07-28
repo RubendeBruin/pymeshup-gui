@@ -113,6 +113,14 @@ Hulls can be constructed using Frames
 - frames can be scaled using new_f = f1.scaled(x=2, y=2)
 - then construct a hull from frames and their positions using
   h = Hull(0,f1, 20, f2, 30, f2, ...)
+  
+<b>Tracing a mesh to make it watertight</b>
+vol = bad.reframe()
+options:
+- n_waterlines
+- n_points_per_waterline
+- margin [float]
+- full_hull [bool]
 
 <b>Creating a panel distribution</b>
 - regrid(iterations=10, pct=5)
